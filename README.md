@@ -22,10 +22,11 @@ This document explains how to properly set up and run the Pub/Sub project locall
 
 Please follow all steps in order.
 
-🚀 1. Clone the Repository
+## 🚀 1. Clone the Repository
 git clone <YOUR-REPO-URL>
 cd GCP-Pub-Sub-Project
-🐍 2. Create a Virtual Environment (Required)
+
+## 🐍 2. Create a Virtual Environment (Required)
 
 Inside the project folder:
 
@@ -44,7 +45,7 @@ You should now see:
 
 in your terminal.
 
-📦 3. Install Project Dependencies
+## 📦 3. Install Project Dependencies
 
 Install required packages:
 
@@ -52,7 +53,7 @@ pip install -r requirements.txt
 
 If requirements.txt does not exist, contact the repository owner.
 
-☁️ 4. Install Google Cloud SDK
+## ☁️ 4. Install Google Cloud SDK
 
 Download and install:
 
@@ -61,7 +62,8 @@ https://cloud.google.com/sdk/docs/install
 After installation, initialize:
 
 gcloud init
-🔐 5. Authenticate Application Default Credentials (ADC)
+
+## 🔐 5. Authenticate Application Default Credentials (ADC)
 
 This step is required for Pub/Sub to work:
 
@@ -69,7 +71,7 @@ gcloud auth application-default login
 
 A browser window will open. Log in with your Google account.
 
-🎯 6. Set the Correct GCP Project
+## 🎯 6. Set the Correct GCP Project
 gcloud config set project project-a85a075d-91d4-41d4-bc0
 
 Verify:
@@ -79,13 +81,15 @@ gcloud config list
 Make sure the project matches:
 
 project-a85a075d-91d4-41d4-bc0
-📡 7. Ensure Topic and Subscription Exist
+
+## 📡 7. Ensure Topic and Subscription Exist
 
 If they do not already exist, run:
 
 gcloud pubsub topics create my-topic
 gcloud pubsub subscriptions create my-sub --topic=my-topic
-▶️ 8. Running the Application
+
+## ▶️ 8. Running the Application
 IMPORTANT:
 
 Do NOT use the VS Code Code Runner extension.
