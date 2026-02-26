@@ -1,4 +1,5 @@
 from google.cloud import pubsub_v1
+from datetime import datetime
 
 # TODO(developer)
 project_id = "project-a85a075d-91d4-41d4-bc0"
@@ -10,6 +11,7 @@ publisher = pubsub_v1.PublisherClient()
 topic_path = publisher.topic_path(project_id, topic_id)
 
 for n in range(1, 10):
+
     data_str = f"Message number {n}"
     # Data must be a bytestring
     data = data_str.encode("utf-8")
