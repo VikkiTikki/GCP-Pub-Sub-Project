@@ -2,7 +2,7 @@ from concurrent.futures import TimeoutError
 from google.cloud import pubsub_v1
 import google.auth
 from datetime import datetime
-from db import Database
+from Database import Database
 
 # Authenticate with Google Cloud
 credentials, project = google.auth.default()
