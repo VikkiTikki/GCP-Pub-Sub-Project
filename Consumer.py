@@ -15,7 +15,7 @@ db = Database(
     host="130.211.227.149",   # Your Cloud SQL public IP
     user="root",              # Your MySQL username
     password="123456", # <-- Replace this with your actual password
-    database="pubsub"         # The database you created in Cloud SQL
+    database="Pubsub"         # The database you created in Cloud SQL
 )
 
 # Create table if it doesn't exist
