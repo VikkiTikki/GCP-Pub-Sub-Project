@@ -28,14 +28,6 @@ lock = Lock()
 def callback(message: pubsub_v1.subscriber.message.Message) -> None:
     global last_receive_time
     
-    payload = json.loads(message.data.decode("utf-8"))
-
-# Extracting message details, define types for clarity
-    message_id = payload["message_id"]
-    event_timestamp = datetime.fromisoformat(payload["event_timestamp"])
-    content = payload["content"]
-
-    receive_time = datetime.now()
     with lock:
         # Latency Calculation
         latency = (receive_time - event_timestamp).total_seconds()
@@ -47,8 +39,17 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
 
         last_receive_time = receive_time
 
+    payload = json.loads(message.data.decode("utf-8"))
+
+# Extracting message details, define types for clarity
+    message_id = payload["message_id"]
+    event_timestamp = datetime.fromisoformat(payload["event_timestamp"])
+    content = payload["content"]
+
+    receive_time = datetime.now()
+
         # Atomic Print Block
-        output = f"""
+    output = f"""
 --- Message Analytics ---
 Message ID: {message_id}
 Content: {content}
@@ -56,7 +57,7 @@ Latency (seconds): {latency:.4f}
 Time Between Messages: {time_between}
 -------------------------
 """
-        print(output)
+    print(output)
 
     message.ack()
 

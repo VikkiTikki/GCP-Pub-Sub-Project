@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 from threading import Lock
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 import threading
 import sys
 import io
@@ -13,17 +14,19 @@ import io
 st.set_page_config(page_title="Pub/Sub Consumer", layout="wide")
 st.title("📩 Pub/Sub Message Consumer")
 
+logs = []
+log_lock = Lock()
+
 if "running" not in st.session_state:
     st.session_state.running = False
-if "logs" not in st.session_state:
-    st.session_state.logs = []
 
 # Capture print output
 class StreamCapture(io.StringIO):
     def write(self, txt):
         if txt.strip():
-            st.session_state.logs.append(txt)
-        super().write(txt)
+            with log_lock:
+                logs.append(txt)
+            super().write(txt)
 
 # ---------------- ORIGINAL CODE (UNCHANGED LOGIC) ----------------
 def run_consumer():
@@ -85,7 +88,6 @@ Time Between Messages: {time_between}
             streaming_pull_future.result()
 
     sys.stdout = sys.__stdout__
-    st.session_state.running = False
 
 # ---------------- UI CONTROLS ----------------
 col1, col2 = st.columns(2)
@@ -99,7 +101,8 @@ with col1:
 
 with col2:
     if st.button("⏹ Stop"):
-        st.session_state.logs.append("Stop requested...")
+        with log_lock:
+            logs.append("Stop requested...")
         st.session_state.running = False
 
 # ---------------- STATUS ----------------
@@ -108,7 +111,8 @@ st.write("🟢 Listening" if st.session_state.running else "🔴 Stopped")
 
 # ---------------- LOG DISPLAY ----------------
 st.subheader("Message Output")
-st.text("\n".join(st.session_state.logs[-100:]))
+with log_lock:
+    st.text("\n".join(logs[-100:]))  # Show last 100 log entries
 
 # Auto refresh
-st.experimental_rerun()
+st_autorefresh(interval=2000, key="datarefresh")
