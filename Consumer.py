@@ -2,7 +2,7 @@ from concurrent.futures import TimeoutError
 from google.cloud import pubsub_v1
 import google.auth
 from datetime import datetime
-from db import Database
+from Database import Database
 
 # Authenticate with Google Cloud
 credentials, project = google.auth.default()
@@ -15,7 +15,7 @@ db = Database(
     host="130.211.227.149",   # Your Cloud SQL public IP
     user="root",              # Your MySQL username
     password="123456", # <-- Replace this with your actual password
-    database="pubsub"         # The database you created in Cloud SQL
+    database="Pubsub"         # The database you created in Cloud SQL
 )
 
 # Create table if it doesn't exist
@@ -71,4 +71,5 @@ with subscriber:
         streaming_pull_future.result(timeout=timeout)
     except TimeoutError:
         streaming_pull_future.cancel()
+        streaming_pull_future.result()
         streaming_pull_future.result()
