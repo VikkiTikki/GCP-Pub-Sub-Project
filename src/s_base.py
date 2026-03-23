@@ -72,3 +72,4 @@ with subscriber:
     except TimeoutError:
         streaming_pull_future.cancel()
         streaming_pull_future.result()
+        streaming_pull_future.result()
