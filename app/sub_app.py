@@ -10,6 +10,9 @@ import threading
 import sys
 import io
 
+# ---------------- IMPORT YOUR DATABASE CLASS ----------------
+from database import Database
+
 # ---------------- STREAMLIT SETUP ----------------
 st.set_page_config(page_title="Pub/Sub Consumer", layout="wide")
 st.title("📩 Pub/Sub Message Consumer")
@@ -28,37 +31,54 @@ class StreamCapture(io.StringIO):
                 logs.append(txt)
             super().write(txt)
 
-# ---------------- ORIGINAL CODE (UNCHANGED LOGIC) ----------------
-def run_consumer():
-    captured_output = StreamCapture()
-    sys.stdout = captured_output
+# ---------------- AUTHENTICATE WITH GOOGLE CLOUD ----------------
+credentials, project = google.auth.default()
+print("Authenticated project:", project)
 
-    credentials, project = google.auth.default()
-    print("Authenticated project:", project)
+# ---------------- CONNECT TO CLOUD SQL ----------------
+db = Database(
+    host="130.211.227.149",
+    user="root",
+    password="123456",   # replace with your real password
+    database="Pubsub"
+)
 
-    project_id = "project-a85a075d-91d4-41d4-bc0"
-    subscription_id = "my-sub"
-    timeout = 10.0
+if db.conn:
+    db.create_table()
+else:
+    print("Database connection failed. Messages will not be saved.")
 
-    subscriber = pubsub_v1.SubscriberClient()
-    subscription_path = subscriber.subscription_path(project_id, subscription_id)
+# ---------------- PUB/SUB CONFIG ----------------
+project_id = "project-a85a075d-91d4-41d4-bc0"
+subscription_id = "my-sub"
+timeout = 10.0
 
-    last_receive_time = None
-    lock = Lock()
+subscriber = pubsub_v1.SubscriberClient()
+subscription_path = subscriber.subscription_path(project_id, subscription_id)
 
-    def callback(message: pubsub_v1.subscriber.message.Message) -> None:
-        nonlocal last_receive_time
+# ---------------- THREAD-SAFE STRUCTURES ----------------
+last_receive_time = None
+lock = Lock()
 
-        receive_time = datetime.now()
+# ---------------- CALLBACK FUNCTION ----------------
+def callback(message: pubsub_v1.subscriber.message.Message) -> None:
+    global last_receive_time
+
+    receive_time = datetime.utcnow()
+
+    try:
         payload = json.loads(message.data.decode("utf-8"))
 
+        # Extract message details
         message_id = payload["message_id"]
         event_timestamp = datetime.fromisoformat(payload["event_timestamp"])
         content = payload["content"]
 
         with lock:
+            # Latency calculation
             latency = (receive_time - event_timestamp).total_seconds()
 
+            # Time between messages
             time_between = None
             if last_receive_time:
                 time_between = (receive_time - last_receive_time).total_seconds()
@@ -69,16 +89,43 @@ def run_consumer():
 --- Message Analytics ---
 Message ID: {message_id}
 Content: {content}
+Published at: {event_timestamp}
+Received at: {receive_time}
 Latency (seconds): {latency:.4f}
 Time Between Messages: {time_between}
 -------------------------
 """
             print(output)
 
+        # ---------------- SAVE TO MYSQL ----------------
+        if db.conn:
+            saved = db.insert_message(
+                message_id,
+                content,
+                event_timestamp,
+                receive_time
+            )
+
+            if saved:
+                print("Saved to Cloud SQL")
+            else:
+                print("Duplicate or insert error")
+
+        # ACK message
         message.ack()
+        print("Message ACKed")
+
+    except Exception as e:
+        print(f"Error processing message: {e}")
+        message.nack()
+
+# ---------------- START LISTENING ----------------
+def run_consumer():
+    captured_output = StreamCapture()
+    sys.stdout = captured_output
 
     streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
-    print(f"Listening for messages on {subscription_path}..\n")
+    print(f"Listening for messages on {subscription_path}...\n")
 
     with subscriber:
         try:
@@ -112,7 +159,7 @@ st.write("🟢 Listening" if st.session_state.running else "🔴 Stopped")
 # ---------------- LOG DISPLAY ----------------
 st.subheader("Message Output")
 with log_lock:
-    st.text("\n".join(logs[-100:]))  # Show last 100 log entries
+    st.text("\n".join(logs[-100:]))
 
 # Auto refresh
 st_autorefresh(interval=2000, key="datarefresh")
