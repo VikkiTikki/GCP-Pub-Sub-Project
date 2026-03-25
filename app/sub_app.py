@@ -1,165 +1,47 @@
-from concurrent.futures import TimeoutError
-from google.cloud import pubsub_v1
-import google.auth
-import json
-from datetime import datetime
-from threading import Lock
 import streamlit as st
+import pandas as pd
 from streamlit_autorefresh import st_autorefresh
-import threading
-import sys
-import io
-
-# ---------------- IMPORT YOUR DATABASE CLASS ----------------
 from database import Database
 
-# ---------------- STREAMLIT SETUP ----------------
-st.set_page_config(page_title="Pub/Sub Consumer", layout="wide")
-st.title("📩 Pub/Sub Message Consumer")
+st.set_page_config(page_title="Pub/Sub Consumer Dashboard", layout="wide")
+st.title("📩 Pub/Sub Consumer Dashboard")
 
-logs = []
-log_lock = Lock()
+# st_autorefresh(interval=5000, key="subscriber_refresh")
+if st.button("Refresh Data"):
+    st.rerun()
 
-if "running" not in st.session_state:
-    st.session_state.running = False
+st.subheader("Subscriber Database Records")
 
-# Capture print output
-class StreamCapture(io.StringIO):
-    def write(self, txt):
-        if txt.strip():
-            with log_lock:
-                logs.append(txt)
-            super().write(txt)
+try:
+    db = Database(
+        host="130.211.227.149",
+        user="user",
+        password="123456",
+        database="subscriber_db"
+    )
 
-# ---------------- AUTHENTICATE WITH GOOGLE CLOUD ----------------
-credentials, project = google.auth.default()
-print("Authenticated project:", project)
+    if db.conn:
+        db.create_subscriber_table()
+        rows = db.fetch_received_messages()
 
-# ---------------- CONNECT TO CLOUD SQL ----------------
-db = Database(
-    host="130.211.227.149",
-    user="root",
-    password="123456",   # replace with your real password
-    database="Pubsub"
-)
+        if rows:
+            df = pd.DataFrame(rows)
 
-if db.conn:
-    db.create_table()
-else:
-    print("Database connection failed. Messages will not be saved.")
+            if "is_duplicate" in df.columns:
+                df["is_duplicate"] = df["is_duplicate"].map({
+                    1: "Yes",
+                    0: "No",
+                    True: "Yes",
+                    False: "No"
+                })
 
-# ---------------- PUB/SUB CONFIG ----------------
-project_id = "project-a85a075d-91d4-41d4-bc0"
-subscription_id = "my-sub"
-timeout = 10.0
+            st.dataframe(df, width="stretch")
+        else:
+            st.info("No subscriber messages stored yet.")
 
-subscriber = pubsub_v1.SubscriberClient()
-subscription_path = subscriber.subscription_path(project_id, subscription_id)
+        db.close()
+    else:
+        st.error("Could not connect to subscriber_db.")
 
-# ---------------- THREAD-SAFE STRUCTURES ----------------
-last_receive_time = None
-lock = Lock()
-
-# ---------------- CALLBACK FUNCTION ----------------
-def callback(message: pubsub_v1.subscriber.message.Message) -> None:
-    global last_receive_time
-
-    receive_time = datetime.utcnow()
-
-    try:
-        payload = json.loads(message.data.decode("utf-8"))
-
-        # Extract message details
-        message_id = payload["message_id"]
-        event_timestamp = datetime.fromisoformat(payload["event_timestamp"])
-        content = payload["content"]
-
-        with lock:
-            # Latency calculation
-            latency = (receive_time - event_timestamp).total_seconds()
-
-            # Time between messages
-            time_between = None
-            if last_receive_time:
-                time_between = (receive_time - last_receive_time).total_seconds()
-
-            last_receive_time = receive_time
-
-            output = f"""
---- Message Analytics ---
-Message ID: {message_id}
-Content: {content}
-Published at: {event_timestamp}
-Received at: {receive_time}
-Latency (seconds): {latency:.4f}
-Time Between Messages: {time_between}
--------------------------
-"""
-            print(output)
-
-        # ---------------- SAVE TO MYSQL ----------------
-        if db.conn:
-            saved = db.insert_message(
-                message_id,
-                content,
-                event_timestamp,
-                receive_time
-            )
-
-            if saved:
-                print("Saved to Cloud SQL")
-            else:
-                print("Duplicate or insert error")
-
-        # ACK message
-        message.ack()
-        print("Message ACKed")
-
-    except Exception as e:
-        print(f"Error processing message: {e}")
-        message.nack()
-
-# ---------------- START LISTENING ----------------
-def run_consumer():
-    captured_output = StreamCapture()
-    sys.stdout = captured_output
-
-    streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
-    print(f"Listening for messages on {subscription_path}...\n")
-
-    with subscriber:
-        try:
-            streaming_pull_future.result(timeout=timeout)
-        except TimeoutError:
-            streaming_pull_future.cancel()
-            streaming_pull_future.result()
-
-    sys.stdout = sys.__stdout__
-
-# ---------------- UI CONTROLS ----------------
-col1, col2 = st.columns(2)
-
-with col1:
-    if st.button("▶️ Start Listening"):
-        if not st.session_state.running:
-            st.session_state.running = True
-            thread = threading.Thread(target=run_consumer, daemon=True)
-            thread.start()
-
-with col2:
-    if st.button("⏹ Stop"):
-        with log_lock:
-            logs.append("Stop requested...")
-        st.session_state.running = False
-
-# ---------------- STATUS ----------------
-st.subheader("Status")
-st.write("🟢 Listening" if st.session_state.running else "🔴 Stopped")
-
-# ---------------- LOG DISPLAY ----------------
-st.subheader("Message Output")
-with log_lock:
-    st.text("\n".join(logs[-100:]))
-
-# Auto refresh
-st_autorefresh(interval=2000, key="datarefresh")
+except Exception as e:
+    st.error(f"Error loading subscriber data: {e}")
