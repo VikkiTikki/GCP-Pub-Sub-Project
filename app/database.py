@@ -82,7 +82,9 @@ class Database:
             publish_time DATETIME,
             receive_time DATETIME,
             latency_ms INT,
-            is_duplicate BOOLEAN
+            is_duplicate BOOLEAN,
+            INDEX idx_message_id (message_id)
+            INDEX idx_receive_time (receive_time)
         );
         """
         self.cursor.execute(query)
@@ -115,10 +117,10 @@ class Database:
             print("No database connection. Cannot check duplicates.")
             return False
 
-        query = "SELECT COUNT(*) AS count FROM received_messages WHERE message_id = %s"
+        query = "SELECT 1 FROM received_messages WHERE message_id = %s LIMIT 1"
         self.cursor.execute(query, (message_id,))
         result = self.cursor.fetchone()
-        return result["count"] > 0
+        return result is not None 
 
     def fetch_received_messages(self):
         if not self.conn or not self.cursor:
