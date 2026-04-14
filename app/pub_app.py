@@ -9,15 +9,18 @@ import io
 import pandas as pd
 from database import Database
 import base64
+import os
+from config import DB_CONFIG
 
 st.set_page_config(page_title="PawPrint Grooming Co.", page_icon="🐾",layout="wide")
 
 def get_base64(file_path):
     with open(file_path, "rb") as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
+        return base64.b64encode(f.read()).decode()
 
-img_base64 = get_base64("C:\\Users\\vicky\\OneDrive\\Pictures\\dogs.jpg")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+img_path = os.path.join(BASE_DIR, "..", "assets", "dogs.jpg")
+img_base64 = get_base64(img_path)
 
 st.markdown(
     f"""
@@ -27,7 +30,7 @@ st.markdown(
             rgba(0, 0, 0, 0.6),
             rgba(0, 0, 0, 0.6)
         ),
-        url("data:image/png;base64,{img_base64}");
+        url("data:image/jpeg;base64,{img_base64}");
         background-size: cover;
         background-position: center;
         filter: grayscale(60%);
@@ -89,12 +92,9 @@ def run_publisher(user_message, reuse_previous=False):
 
     try:
         db = Database(
-            host="127.0.0.1",
-            user="user",
-            port=3307,
-            password="123456",
-            database="publisher_db"
-        )
+            **DB_CONFIG,
+            database="subscriber_db"
+)
         db.create_publisher_table()
 
         project_id = "project-a85a075d-91d4-41d4-bc0"
