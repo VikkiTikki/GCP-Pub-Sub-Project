@@ -89,8 +89,9 @@ def run_publisher(user_message, reuse_previous=False):
 
     try:
         db = Database(
-            host="130.211.227.149",
+            host="127.0.0.1",
             user="user",
+            port=3307,
             password="123456",
             database="publisher_db"
         )
@@ -166,8 +167,7 @@ if category == "Send Pickup Update":
     )
 
     reuse_previous_id = st.checkbox(
-    "Simulate Duplicate Message",
-    help="Used for demonstrating duplicate detection in the system"
+    "Simulate Duplicate Message"
 )
     if st.button("Submit"):
         if message_content.strip():
@@ -187,8 +187,9 @@ elif category == "View Messages":
 
     try:
         db_view = Database(
-            host="130.211.227.149",
+            host="127.0.0.1",
             user="user",
+            port=3307,
             password="123456",
             database="publisher_db"
         )
