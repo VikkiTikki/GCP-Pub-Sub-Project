@@ -2,6 +2,7 @@ from google.cloud import pubsub_v1
 import google.auth
 import json
 from datetime import datetime
+from config import DB_CONFIG
 from database import Database
 
 # ---------------- AUTH ----------------
@@ -28,15 +29,10 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
         publish_time = datetime.fromisoformat(payload["event_timestamp"])
         content = payload["content"]
 
-        # NEW: open a fresh DB connection for this message
         db = Database(
-            host="127.0.0.1",
-            user="user",
-            port=3307,
-            password="123456",
+            **DB_CONFIG,
             database="subscriber_db"
         )
-
         if not db.conn:
             print("Database connection failed inside callback.")
             message.nack()
