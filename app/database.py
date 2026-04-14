@@ -3,13 +3,14 @@ import mysql.connector
 from mysql.connector import Error
 
 class Database:
-    def __init__(self, host, user, password, database):
+    def __init__(self, host, user, password, database, port=3307):
         self.conn = None
         self.cursor = None
 
         try:
             self.conn = mysql.connector.connect(
                 host=host,
+                port=port,
                 user=user,
                 password=password,
                 database=database
@@ -83,14 +84,26 @@ class Database:
             receive_time DATETIME,
             latency_ms INT,
             is_duplicate BOOLEAN,
-            INDEX idx_message_id (message_id)
+            duplicate_delay_ms INT,
+            delivery_attempt INT,
+            INDEX idx_message_id (message_id),
             INDEX idx_receive_time (receive_time)
         );
         """
         self.cursor.execute(query)
         self.conn.commit()
 
-    def insert_received_message(self, message_id, content, publish_time, receive_time, is_duplicate):
+    def insert_received_message(
+        self,
+        message_id,
+        content,
+        publish_time,
+        receive_time,
+        is_duplicate,
+        duplicate_delay,
+        delivery_attempt,
+        time_since_previous_attempt_ms,
+    ):
         if not self.conn or not self.cursor:
             print("No database connection. Cannot insert subscriber message.")
             return False
@@ -99,10 +112,20 @@ class Database:
 
         query = """
         INSERT INTO received_messages
-        (message_id, content, publish_time, receive_time, latency_ms, is_duplicate)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        (message_id, content, publish_time, receive_time, latency_ms, is_duplicate, duplicate_delay_ms, delivery_attempt, time_since_previous_attempt_ms)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
-        values = (message_id, content, publish_time, receive_time, latency, is_duplicate)
+        values = (
+            message_id,
+            content,
+            publish_time,
+            receive_time,
+            latency,
+            is_duplicate,
+            duplicate_delay,
+            delivery_attempt,
+            time_since_previous_attempt_ms
+        )
 
         try:
             self.cursor.execute(query, values)
@@ -128,13 +151,50 @@ class Database:
             return []
 
         query = """
-        SELECT id, message_id, content, publish_time, receive_time, latency_ms, is_duplicate
+        SELECT 
+            id,
+            message_id,
+            content,
+            publish_time,
+            receive_time,
+            latency_ms,
+            is_duplicate,
+            duplicate_delay_ms,
+            delivery_attempt,
+            time_since_previous_attempt_ms
         FROM received_messages
         ORDER BY id DESC
         """
         self.cursor.execute(query)
         return self.cursor.fetchall()
-
+    
+    def count_messages(self, message_id):
+        query = "SELECT COUNT(*) AS count FROM received_messages WHERE message_id = %s"
+        self.cursor.execute(query, (message_id,))
+        result = self.cursor.fetchone()
+        return result["count"]
+    
+    def get_first_seen_time(self, message_id):
+        query = """
+        SELECT MIN(receive_time) AS first_time
+        FROM received_messages
+        WHERE message_id = %s
+        """
+        self.cursor.execute(query, (message_id,))
+        result = self.cursor.fetchone()
+        return result["first_time"]
+    
+    def get_previous_receive_time(self, message_id):
+        query = """
+        SELECT receive_time
+        FROM received_messages
+        WHERE message_id = %s
+        ORDER BY receive_time DESC
+        LIMIT 1
+        """
+        self.cursor.execute(query, (message_id,))
+        result = self.cursor.fetchone()
+        return result["receive_time"] if result else None
     # ---------------- CLOSE CONNECTION ----------------
     def close(self):
         if self.cursor:
