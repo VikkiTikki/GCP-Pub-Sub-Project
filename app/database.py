@@ -86,6 +86,7 @@ class Database:
             is_duplicate BOOLEAN,
             duplicate_delay_ms INT,
             delivery_attempt INT,
+            time_since_previous_attempt_ms INT,
             INDEX idx_message_id (message_id),
             INDEX idx_receive_time (receive_time)
         );
