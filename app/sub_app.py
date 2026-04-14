@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from database import Database
 from datetime import datetime
+from config import DB_CONFIG
 
 def reset_filters(min_time, max_time):
     st.session_state["selected_message_id"] = "All"
@@ -23,12 +24,9 @@ st.subheader("Subscriber Database Records")
 
 try:
     db = Database(
-        host="127.0.0.1",
-        user="user",
-        port=3307,
-        password="123456",
-        database="subscriber_db"
-    )
+    **DB_CONFIG,
+    database="subscriber_db"
+)
 
     if db.conn:
         db.create_subscriber_table()
