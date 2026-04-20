@@ -5,11 +5,12 @@ from datetime import datetime
 import streamlit as st
 from streamlit_option_menu import option_menu
 import sys
+import os
 import io
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import pandas as pd
 from database import Database
 import base64
-import os
 from config import DB_CONFIG
 
 st.set_page_config(page_title="PawPrint Grooming Co.", page_icon="🐾",layout="wide")
@@ -93,7 +94,7 @@ def run_publisher(user_message, reuse_previous=False):
     try:
         db = Database(
             **DB_CONFIG,
-            database="subscriber_db"
+            database="publisher_db"
 )
         db.create_publisher_table()
 
