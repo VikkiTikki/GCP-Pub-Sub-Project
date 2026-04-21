@@ -188,10 +188,7 @@ elif category == "View Messages":
 
     try:
         db_view = Database(
-            host="127.0.0.1",
-            user="user",
-            port=3307,
-            password="123456",
+            **DB_CONFIG,
             database="publisher_db"
         )
         db_view.create_publisher_table()
