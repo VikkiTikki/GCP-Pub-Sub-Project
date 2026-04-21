@@ -3,7 +3,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import streamlit as st
 import pandas as pd
-from database import Database
+from db.database import Database
 from datetime import datetime
 from config import DB_CONFIG
 
@@ -16,6 +16,11 @@ def reset_filters(min_time, max_time):
     st.session_state["end_receive_time"] = max_time.time().replace(microsecond=0)
     st.session_state["apply_time_filter"] = False
     st.session_state["sort_option"] = "Newest records first"
+
+def highlight_duplicate_cell(val):
+    if val == "Yes":
+        return "background-color: rgba(100, 100, 100, 0.15); font-weight: 600;"
+    return ""
 
 st.set_page_config(page_title="Pub/Sub Consumer Dashboard", layout="wide")
 st.title("📩 Pub/Sub Consumer Dashboard")
@@ -267,7 +272,8 @@ try:
                     columns=[col for col in columns_to_drop if col in filtered_df.columns]
                 )
 
-                st.dataframe(filtered_df, width="stretch", hide_index=True)
+                styled_df = filtered_df.style.map(highlight_duplicate_cell, subset=["Is Duplicate"])
+                st.dataframe(styled_df, width="stretch", hide_index=True)
 
             else:
                 st.info("No subscriber messages stored yet.")
