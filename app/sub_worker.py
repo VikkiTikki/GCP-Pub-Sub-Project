@@ -6,7 +6,7 @@ import google.auth
 import json
 from datetime import datetime
 from config import DB_CONFIG
-from database import Database
+from db.database import Database
 
 # ---------------- AUTH ----------------
 credentials, project = google.auth.default()
