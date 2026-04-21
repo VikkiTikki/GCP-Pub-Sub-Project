@@ -3,11 +3,27 @@ import mysql.connector
 from mysql.connector import Error
 
 class Database:
-    def __init__(self, host, user, password, database, port=3307):
+    def __init__(self, host, user, password, database, port=3306):
         self.conn = None
         self.cursor = None
 
         try:
+            # ---------------- STEP 1: CONNECT WITHOUT DATABASE ----------------
+            temp_conn = mysql.connector.connect(
+                host=host,
+                port=port,
+                user=user,
+                password=password
+            )
+            temp_cursor = temp_conn.cursor()
+
+            # ---------------- STEP 2: CREATE DATABASE IF NOT EXISTS ----------------
+            temp_cursor.execute(f"CREATE DATABASE IF NOT EXISTS {database}")
+
+            temp_cursor.close()
+            temp_conn.close()
+
+            # ---------------- STEP 3: CONNECT TO THE DATABASE ----------------
             self.conn = mysql.connector.connect(
                 host=host,
                 port=port,
@@ -15,10 +31,11 @@ class Database:
                 password=password,
                 database=database
             )
+
             self.cursor = self.conn.cursor(dictionary=True)
-            # print(f"Connected to MySQL database: {database}")
+
         except Error as e:
-            print(f"Error connecting to MySQL: {e}")
+            raise Exception(f"MySQL connection failed: {e}")
 
     # ---------------- PUBLISHER TABLE ----------------
     def create_publisher_table(self):
