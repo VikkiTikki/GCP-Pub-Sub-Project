@@ -11,7 +11,7 @@ Unlike typical systems that rely on unpredictable retry behavior, this project:
 👉 detects duplicates in the consumer layer before persistence
 👉 analyzes delivery patterns using stored metadata
 
-##🏗️ Architecture
+## 🏗️ Architecture
 Publisher UI → Pub/Sub Topic → Subscriber Workers → MySQL → Dashboard
                          ├── Worker 1 → received_messages (duplicate-aware)
                          └── Worker 2 → second_received_messages (no duplicate logic)
