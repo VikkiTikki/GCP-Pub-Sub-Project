@@ -1,191 +1,142 @@
-# GCP-Pub-Sub-Project
-## Setup Instructions
+### 📩 Message Delivery Dashboard (Pub/Sub Project)
+##Duplicate Simulation & Delivery Analytics
 
-1. Clone repo
-2. Create virtual environment
-3. Activate environment
-4. Install dependencies
-5. Authenticate with GCP
-6. Set project ID
-7. Run Producer and Consumer
+This project implements an event-driven messaging system using Google Cloud Pub/Sub, with a focus on analyzing message delivery behavior through controlled duplicate simulation.
 
-Google Pub/Sub Python Quickstart:
-https://cloud.google.com/pubsub/docs/publish-receive-messages-client-library
+## 🧠 Key Concept
 
-Application Default Credentials:
-https://cloud.google.com/docs/authentication/provide-credentials-adc
+Unlike typical systems that rely on unpredictable retry behavior, this project:
 
-Google Cloud SDK install:
-https://cloud.google.com/sdk/docs/install
+👉 intentionally simulates duplicate messages
+👉 detects duplicates in the consumer layer before persistence
+👉 analyzes delivery patterns using stored metadata
 
-This document explains how to properly set up and run the Pub/Sub project locally.
+## 🏗️ Architecture
+Publisher UI → Pub/Sub Topic → Subscriber Workers → MySQL → Dashboard
+                         ├── Worker 1 → received_messages (duplicate-aware)
+                         └── Worker 2 → second_received_messages (no duplicate logic)
+# Components
+Publisher UI (Streamlit)
+Sends messages and allows controlled duplicate simulation
 
-Please follow all steps in order.
+Subscriber Worker 1 (Python)
+Detects duplicates before saving and computes delivery metadata
 
-## 🚀 1. Clone the Repository
-git clone <YOUR-REPO-URL>
+Subscriber Worker 2 (Python) (Optional Objective)
+Processes the same messages independently and stores them without duplicate checks
+
+MySQL (Local)
+Stores all messages and enables analysis of delivery behavior
+
+Dashboard UI (Streamlit)
+Displays message records and delivery metrics (latency, retries, duplicates)
+
+## ⚙️ Setup Instructions
+
+Follow all steps in order.
+
+# 0️⃣ Start MySQL
+
+Ensure your MySQL server is running locally before starting the app.
+
+# 1️⃣ Clone the Repository
+
+git clone <repo-url>
 cd GCP-Pub-Sub-Project
 
-## 🐍 2. Create a Virtual Environment (Required)
-
-Inside the project folder:
-
+# 2️⃣ Create Virtual Environment
 python -m venv env
 
 Activate it:
 
 Windows
 .\env\Scripts\activate
+
 Mac/Linux
 source env/bin/activate
 
-You should now see:
-
-(env)
-
-in your terminal.
-
-## 📦 3. Install Project Dependencies
-
-Install required packages:
+# 3️⃣ Install Dependencies
 
 pip install -r requirements.txt
 
-If requirements.txt does not exist, contact the repository owner.
-
-## ☁️ 4. Install Google Cloud SDK
-
-Download and install:
+# 4️⃣ Install Google Cloud SDK
 
 https://cloud.google.com/sdk/docs/install
 
-After installation, initialize:
+Then initialize:
 
 gcloud init
 
-## 🔐 5. Authenticate Application Default Credentials (ADC)
-
-This step is required for Pub/Sub to work:
-
+# 5️⃣ Authenticate (Required for Pub/Sub)
 gcloud auth application-default login
 
-A browser window will open. Log in with your Google account.
-
-## 🎯 6. Set the Correct GCP Project
+# 6️⃣ Set Project ID
 gcloud config set project project-a85a075d-91d4-41d4-bc0
 
-Verify:
-
-gcloud config list
-
-Make sure the project matches:
-
-project-a85a075d-91d4-41d4-bc0
-
-## 📡 7. Ensure Topic and Subscription Exist
-
-If they do not already exist, run:
-
+# 7️⃣ Create Pub/Sub Resources
 gcloud pubsub topics create my-topic
 gcloud pubsub subscriptions create my-sub --topic=my-topic
+gcloud pubsub subscriptions create my-sub-2 --topic=my-topic
 
-## ▶️ 8. Running the Application
-IMPORTANT:
+# ▶️ Running the Application
 
-Do NOT use the VS Code Code Runner extension.
+Step 1 – Start Subscriber Worker 1
+python app/sub_worker.py
 
-Use one of the following methods:
+Step 2 – Start Subscriber Worker 2 (Optional Objective)
+python app/sub_worker_2.py
 
-Option A – Recommended (VS Code)
+Step 3 – Run Publisher UI
+streamlit run app/pub_app.py
 
-Right-click the file and select:
+Step 4 – Run Dashboard UI
+streamlit run app/sub_app.py
 
-Run Python File in Terminal
-Option B – Manual Terminal
+# 🧠 Recommended Testing Order
+Start both subscriber workers
+Run publisher UI
+Send messages
+Use Simulate Duplicate
+View results in dashboard
 
-Make sure virtual environment is active:
+# 🗄️ Database Behavior
+Databases are automatically created
+Tables are automatically created
+No manual SQL setup required
+Tables
+received_messages → duplicate-aware processing
+second_received_messages → independent subscriber (no duplicate logic)
 
-.\env\Scripts\activate
+# 📊 Features
+Duplicate detection using message_id
+Controlled duplicate simulation
+Latency calculation
+Retry gap analysis
+Delivery attempt tracking
+Multi-subscriber architecture (fan-out)
+Filtering and sorting dashboard
 
-Then run:
+# 🎯 Project Focus
 
-python Producer.py
-python Consumer.py
-⚠️ Common Issues
-❌ ModuleNotFoundError: No module named 'google.cloud'
+This project demonstrates:
 
-You are not using the virtual environment.
-
-Fix:
-
-Activate env
-
-Or select the correct interpreter in VS Code:
-
-Ctrl + Shift + P
-
-Python: Select Interpreter
-
-Choose env\Scripts\python.exe
-
-❌ Subscriber receives no messages
-
-Make sure:
-
-Subscription exists before publishing
-
-Subscriber is running before Producer
-
-You did not manually pull and acknowledge messages in the GCP console
-
-🧠 Pub/Sub Testing Order
-
-Correct sequence:
-
-Create Topic
-
-Create Subscription
-
-Run Subscriber
-
-Run Producer
-
-📊 Project Focus
-
-This project evaluates:
-
-Message frequency
-
-Latency between publish and receive
-
-Duplicate message detection
-
+Event-driven architecture
 At-least-once delivery behavior
+Controlled duplicate testing
+Data-driven message analysis
+Multi-subscriber message processing
 
-✅ Final Checklist
+# 📌 Notes
 
-Before running:
+Duplicate messages are intentionally generated
+Duplicate detection occurs in the Python consumer layer
+MySQL is used for storage and lookup, not detection
 
- Virtual environment created
+# 🚀 Future Improvements
+Cloud deployment (Cloud Run / Cloud SQL)
+Enhanced dashboard visualizations
+Automated Pub/Sub resource creation
 
- Environment activated
+# 👩‍💻 Author
 
- Dependencies installed
-
- GCloud SDK installed
-
- ADC authenticated
-
- Correct project set
-
- Topic + subscription created
-
-If setup fails, verify:
-
-python --version
-which python  (Mac/Linux)
-where python  (Windows)
-
-It must point to:
-
-env/Scripts/python.exe
+Victoria D
