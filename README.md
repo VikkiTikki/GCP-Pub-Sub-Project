@@ -4,7 +4,7 @@
 This project implements an event-driven messaging system using Google Cloud Pub/Sub, with a focus on analyzing message delivery behavior through controlled duplicate simulation.
 
 ## 🏗️ Architecture
-Publisher UI → Pub/Sub Topic → Subscriber Worker (Sub 1 & 2) (duplicate detection) → MySQL → Dashboard
+Publisher UI → Pub/Sub Topic → Subscriber Worker 1 & 2 (duplicate detection) → MySQL → Dashboard
                 
 ### Components
 Publisher UI (Streamlit)
